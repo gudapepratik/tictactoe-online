@@ -1,0 +1,33 @@
+export type Cell = "X" | "O" | "E";
+export type Board = Cell[][];
+export type PlayerAvatar = "alien" | "robot" | "cyborg";
+export type PlayerType = "X" | "O";
+export type BoardIndex = [number, number];
+
+export interface Player {
+  username: string
+  socketId: string
+  avatar: PlayerAvatar
+  type: PlayerType
+}
+
+export interface Game {
+  board: Board;
+  turn: PlayerType;
+  playerX: Player | null;
+  playerO: Player | null;
+  winner?: "X" | "O" | "draw";
+}
+
+export interface PlayerInput {
+  username: string;
+  type: PlayerType;
+  idx: BoardIndex;
+}
+
+export interface GameState {
+  idx: BoardIndex;
+  player: string; // username
+  symbol: "X" | "O";
+  winner: string | null;
+}
