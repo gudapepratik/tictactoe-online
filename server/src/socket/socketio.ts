@@ -1,35 +1,10 @@
 import { randomUUID, UUID } from "node:crypto";
 import {Server, Socket} from "socket.io"
+import { Game, Player, PlayerAvatar, PlayerType } from "../types/GameTypes";
+import { createEmptyBoard } from "../utils/gameLogic";
 
 interface EventResponse {
   (ok: boolean, message: string, data: any) : void
-}
-
-type Cell = "X" | "O" | "E";
-type Board = Cell[][];
-type PlayerAvatar = "alien" | "robot" | "cyborg";
-type PlayerType = "X" | "O";
-
-type Player = {
-  username: string
-  socketId: string
-  avatar: PlayerAvatar
-  type: PlayerType
-}
-
-interface Game {
-  board: Board;
-  turn: PlayerType;
-  playerX: Player | null;
-  playerO: Player | null;
-  winner?: "X" | "O" | "draw";
-}
-
-
-function createEmptyBoard(): Board {
-  return Array.from({length: 3}, () =>
-    Array.from({length: 3}, () => "E" as Cell)
-  )
 }
 
 let games: Map<UUID,Game> = new Map(); // <roomId, Game>
@@ -155,7 +130,7 @@ const initSocketio = (io: Server) => {
 
     
     // turn (whos turn ?), move: {row: , col: }, username
-    // socket.on("game:input", )
+    socket.on("game:input", (input: ))
 
     
   })
