@@ -1,6 +1,7 @@
 import { Server } from "socket.io";
 import {app} from './app'
 import { createServer } from "node:http";
+import initSocketio from "./socket/socketio";
 
 const port: string = process.env.PORT || '8000';
 
@@ -19,5 +20,6 @@ httpServer.listen(port, () => {
   console.log(`Server running on PORT ${port}`)
 
   // initialize socketio
+  initSocketio(io);
 })
 
