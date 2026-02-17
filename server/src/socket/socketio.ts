@@ -1,11 +1,21 @@
 import { randomUUID, UUID } from "node:crypto";
 import {Server, Socket} from "socket.io"
-import { Game, Player, PlayerAvatar, PlayerType } from "../types/GameTypes";
-import { createEmptyBoard } from "../utils/gameLogic";
+import { Game, GameState, Player, PlayerAvatar, PlayerInput, PlayerType } from "../types/GameTypes";
+import { createEmptyBoard, isWinner } from "../utils/gameLogic";
 
 interface EventResponse {
   (ok: boolean, message: string, data: any) : void
 }
+
+/*
+  emitters (io):
+    1. game:players
+    2. game:update
+  listners:
+    1. game:create
+    2. game:join
+    3. game:input
+*/
 
 let games: Map<UUID,Game> = new Map(); // <roomId, Game>
 
@@ -129,8 +139,57 @@ const initSocketio = (io: Server) => {
     })
 
     
-    // turn (whos turn ?), move: {row: , col: }, username
-    socket.on("game:input", (input: ))
+    socket.on("game:input", (input: PlayerInput, gameId: UUID, res: EventResponse) => {
+      const {username, type, idx} = input;
+      const [row, col] = idx;
+
+      const game = games.get(`game:${gameId}`);
+      
+      if(!game) {
+        res?.(false, "Game Input Error: Game not Found !!", null);
+        return ;
+      }
+
+      const player : Player | null = type === "X" ? game.playerX : game.playerO;
+
+      if(!player) {
+        res?.(false, "Game Input Error: Game Player instance not Found !!", null);
+        return;
+      }
+
+      if(player.username !== username && player.socketId !== socket.id) {
+        res?.(false, "Game Input Error: Username / Socket does not match with the Player instance !!", null);
+        return;
+      }
+
+      if(game.board[row][col] !== "E") {
+        res?.(false, "Game Input Error: Invalid Move, Cell already Filled !!", null);
+        return;
+      }
+
+      if(game.turn !== type) {
+        res?.(false, "Game Input Error: Invalid Move, It's not Your turn !!", null);
+        return;
+      }
+
+      game.board[row][col] = type === "X" ? "X" : "O";
+      game.turn = type === "X" ? "O" : "X";
+
+      const win = isWinner(game.board, idx, type);
+
+      const gameState : GameState = {
+        idx: idx,
+        player: player.username,
+        symbol: input.type,
+        winner: win ? player.username : null
+      }
+
+      // broadcast the game state
+      io.to(`game:${gameId}`).emit("game:update", {gameState});
+
+      // ack response
+      res?.(true, "Game Input: input Registered successfully !", null);
+    })
 
     
   })
