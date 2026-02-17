@@ -4,6 +4,10 @@ export type PlayerAvatar = "alien" | "robot" | "cyborg";
 export type PlayerType = "X" | "O";
 export type BoardIndex = [number, number];
 
+export interface EventResponse {
+  (ok: boolean, message: string, data: any) : void
+}
+
 export interface Player {
   username: string
   socketId: string

@@ -3,23 +3,23 @@ import cors from "cors"
 import router from "./routes/router"
 import "./config/dotenv"
 import { ApiError } from "./utils/apiError";
+import cookieParser from 'cookie-parser'
 
 const app = express();
 
 app.use(cors({
-  origin(requestOrigin, cb) {
-    if(!requestOrigin || requestOrigin !== process.env.FRONTEND_URL) {
-      cb(new Error("CORS ERROR: ORIGIN MISMATCH"));
-      return;
-    }
-    cb(null, true);
+  origin: (origin, cb) => {
+    if(!origin || origin !== process.env.FRONTEND_URL)
+      cb(new Error("CORS error occurred!!"))
+    else
+      cb(null, true)
   },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "PATCH", "OPTIONS", "DELETE"]
+  credentials: true
 }))
 
+app.use(cookieParser());
 app.use(express.static('public'))
-app.use(express.json({limit: "8kb"}))
+app.use(express.json({limit: "16kb"}))
 app.use(express.urlencoded({limit:"16kb", "extended": true}))
 app.use("/api", router);
 

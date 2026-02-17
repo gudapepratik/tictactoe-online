@@ -2,9 +2,10 @@ import { randomUUID, UUID } from "node:crypto";
 import {Server, Socket} from "socket.io"
 import { Game, GameState, Player, PlayerAvatar, PlayerInput, PlayerType } from "../types/game";
 import { createEmptyBoard, isWinner } from "../utils/gameLogic";
+import { generateGameCode } from "../utils/gameCodeGenerator";
 
-interface EventResponse {
-  (ok: boolean, message: string, data: any) : void
+interface EventResponse<T> {
+  (ok: boolean, message: string, data: T) : void
 }
 
 /*
@@ -18,8 +19,10 @@ interface EventResponse {
 */
 
 let games: Map<UUID,Game> = new Map(); // <roomId, Game>
+let joinCodeMap : Map<string, {gameId: UUID, socketId?: string, lockExpiryBy?: Date}> = new Map(); // to map game code to gameid
 
 const initSocketio = (io: Server) => {
+  console.log("Socket Server running")
   io.on("connection", (socket: Socket) => {
     console.log(`Socket client ${socket.id} connected !!`)
 
@@ -27,7 +30,11 @@ const initSocketio = (io: Server) => {
       console.log(`Socket client ${socket.id} disconnected !!`)
     })
 
-    socket.on("game:create",(username: string, type: PlayerType, avatar: PlayerAvatar, res: EventResponse) => {
+    socket.on("Hello", (username: string, type: PlayerType, res: EventResponse<{name: string, type: string}>) => {
+      res?.(true, `Welcome user ${username} type ${type}`, {name: username, type: type});
+    })
+
+    socket.on("game:create",(username: string, type: PlayerType, avatar: PlayerAvatar, res: EventResponse<{gameId: UUID, joinCode: string} | null>) => {
       // check if socket is already in any game
       let isAlready = false;
 
@@ -55,23 +62,90 @@ const initSocketio = (io: Server) => {
         board: createEmptyBoard(),
         turn: type,
         playerX: type === "X" ? player : null,
-        playerO: type === "O" ? player : null
+        playerO: type === "O" ? player : null,
+        createdAt: new Date()
       }
 
       const gameId : UUID = randomUUID(); 
       games.set(gameId, game);
 
+      // generate join code
+      let joinCode = generateGameCode(6);
+
+      // check if the game code is already taken
+      while(joinCodeMap.has(joinCode)) {
+        // generate new code
+        joinCode = generateGameCode(6);
+      }
+
       // create and join room
       socket.join(`game:${gameId}`);
 
       // create joining link
-      const joinLink = `${process.env.FRONTEND_URL}/private?join=${gameId}&avl_type=${type === "X"? "O" : "X"}`;
+      // const joinLink = `${process.env.FRONTEND_URL}/private?join=${gameId}&avl_type=${type === "X"? "O" : "X"}`;
 
       // send the response
-      res?.(true, "Game created", {gameId, joinLink});
+      res?.(true, "Game created", {gameId, joinCode});
     })
 
-    socket.on("game:join", (username: string, gameId: UUID, type: PlayerType, avatar: PlayerAvatar, res: EventResponse) => {
+    socket.on("game:checkGame", (joinCode: string, res: EventResponse<{availableSymbols: PlayerType[], availableAvatars: PlayerAvatar[], expiresIn: string} | null>) => {
+      // check for the game
+      if(!joinCodeMap.has(joinCode)) {
+        res?.(false, "Wrong Code Entered or requested Game does not Exists", null);
+        return;
+      }
+
+      const value = joinCodeMap.get(joinCode);
+
+      if(!value?.gameId) {
+        res?.(false, "Game not found", null);
+        return;
+      }
+
+      // check lock
+      if(
+        value.socketId && 
+        value.socketId !== socket.id && 
+        value.lockExpiryBy && 
+        value.lockExpiryBy.getTime() > Date.now()
+      ) {
+        res?.(false, "Join Locked: Someone is currently joining. Try again shortly.", null);
+        return;
+      }
+
+      // set the lock for this user
+      value.socketId = socket.id;
+      value.lockExpiryBy = new Date(Date.now() + 15 * 1000); // 15 seconds lock
+
+      const game = games.get(value.gameId);
+
+      if(!game) {
+        res?.(false, "CheckGame Error: Game not Found", null);
+        return;
+      }
+
+      let availableSymbols : PlayerType[] = [];
+      
+      if(!game.playerX) availableSymbols.push("X");
+      if(!game.playerO) availableSymbols.push("O");
+      
+      let allAvatars : PlayerAvatar[] = ["prime", "dwarf", "cyborg"];
+      const takenAvatars = new Set<PlayerAvatar>();
+
+      if(game.playerX?.avatar) takenAvatars.add(game.playerX.avatar);
+      if(game.playerO?.avatar) takenAvatars.add(game.playerO.avatar);
+
+      const availableAvatars = allAvatars.filter(avatar => !takenAvatars.has(avatar));
+
+      if (availableSymbols.length === 0) {
+        res?.(false, "Game is already full", null);
+        return;
+      }
+
+      res?.(true, "Game Available to Join", {availableSymbols, availableAvatars, expiresIn: "15 seconds"})
+    })
+
+    socket.on("game:join", (username: string, gameId: UUID, type: PlayerType, avatar: PlayerAvatar, res: EventResponse<null>) => {
       // check if user already exists in any game
       let isAlready = false;
       let isGameExists = false;
@@ -139,7 +213,7 @@ const initSocketio = (io: Server) => {
     })
 
     
-    socket.on("game:input", (input: PlayerInput, gameId: UUID, res: EventResponse) => {
+    socket.on("game:input", (input: PlayerInput, gameId: UUID, res: EventResponse<null>) => {
       const {username, type, idx} = input;
       const [row, col] = idx;
 

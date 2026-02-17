@@ -1,8 +1,13 @@
 export type Cell = "X" | "O" | "E";
 export type Board = Cell[][];
-export type PlayerAvatar = "alien" | "robot" | "cyborg";
+export type PlayerAvatar = "cyborg" | "dwarf" | "prime";
 export type PlayerType = "X" | "O";
 export type BoardIndex = [number, number];
+
+export interface EventResponse {
+  (ok: boolean, message: string, data: any) : void
+}
+
 
 export interface Player {
   username: string
@@ -17,6 +22,7 @@ export interface Game {
   playerX: Player | null;
   playerO: Player | null;
   winner?: "X" | "O" | "draw";
+  createdAt: Date
 }
 
 export interface PlayerInput {

@@ -1,4 +1,4 @@
-import { Board, BoardIndex, Cell } from "../types/GameTypes";
+import { Board, BoardIndex, Cell } from "../types/game";
 
 export function isWinner(board: Board, idx: BoardIndex, symbol: "X" | "O") : boolean {
   const [row, col] = idx;
