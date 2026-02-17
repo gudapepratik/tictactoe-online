@@ -5,7 +5,9 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        luckyGuy: ["Luckiest Guy", "sans serif"]
+        luckyGuy: ["Luckiest Guy", "sans serif"],
+        lilitaOne: ["Lilita One", "sans serif"],
+        slackey: ["Slackey", "sans serif"]
       }
     },
   },

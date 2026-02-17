@@ -3,11 +3,30 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App'
 import { SocketProvider } from './contexts/SocketContext'
+import { createBrowserRouter, RouterProvider, type RouteObject } from 'react-router-dom'
+import Game from './pages/Game'
+import JoinPrivateGame from './pages/JoinPrivateGame'
+
+const routes : RouteObject[] = [
+  {
+    path: "/",
+    element: <App/>
+  },
+  {
+    path: "/game/:gameId",
+    element: <Game/>
+  },
+  {
+    path: "/game/private", // /game/private?join=gameCode
+    element: <JoinPrivateGame/> 
+  }
+]
+const router = createBrowserRouter(routes);
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <SocketProvider>
-      <App />
+      <RouterProvider router={router} />
     </SocketProvider>
   </StrictMode>,
 )
