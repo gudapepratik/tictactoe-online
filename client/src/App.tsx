@@ -1,33 +1,19 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
-
 function App() {
-  const [count, setCount] = useState(0)
+
+  const createPrivateGame = async () => {
+
+  }
+
 
   return (
     <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
+      <div className="w-screen h-screen flex items-center justify-center bg-gradient-to-r from-slate-800 to-slate-900">
+
+        <div className="flex items-center gap-4">
+          <button className="text-4xl font-luckyGuy border-4 rounded-2xl px-6 py-3 hover:scale-110 hover:bg-rose-600 hover:-skew-x-3 transition-all">Public</button>
+          <button onClick={createPrivateGame} className="text-4xl font-luckyGuy border-4 rounded-2xl px-6 py-3 hover:scale-110 hover:bg-rose-600 hover:skew-x-3 transition-all">Private</button>
+        </div>
+      </div>  
     </>
   )
 }

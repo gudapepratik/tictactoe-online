@@ -1,6 +1,6 @@
 import { randomUUID, UUID } from "node:crypto";
 import {Server, Socket} from "socket.io"
-import { Game, GameState, Player, PlayerAvatar, PlayerInput, PlayerType } from "../types/GameTypes";
+import { Game, GameState, Player, PlayerAvatar, PlayerInput, PlayerType } from "../types/game";
 import { createEmptyBoard, isWinner } from "../utils/gameLogic";
 
 interface EventResponse {
@@ -190,8 +190,6 @@ const initSocketio = (io: Server) => {
       // ack response
       res?.(true, "Game Input: input Registered successfully !", null);
     })
-
-    
   })
 }
 
