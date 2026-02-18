@@ -3,7 +3,7 @@ export const generateGameCode = (length = 6) : string => {
   let code = "";
 
   for(let i = 0; i < length; i++) {
-    const char = chars[Math.floor(Math.random() & chars.length)];
+    const char = chars[Math.floor(Math.random() * chars.length)];
     code += char;
   }
 
