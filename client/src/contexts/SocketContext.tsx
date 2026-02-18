@@ -25,10 +25,10 @@ export const SocketProvider = ({children}: props) => {
     const socket: Socket = io("http://localhost:8000", {
       reconnectionAttempts: 10,
       withCredentials: true,
-    })
-
+    })  
+    
     socketRef.current = socket;
-
+    
     socket.on("connect", () => {
       console.log("Socket client connected");
       setIsSocketConnected(true);

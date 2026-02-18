@@ -1,6 +1,6 @@
 export type Cell = "X" | "O" | "E";
 export type Board = Cell[][];
-export type PlayerAvatar = "alien" | "robot" | "cyborg";
+export type PlayerAvatar = "cyborg" | "dwarf" | "prime";
 export type PlayerType = "X" | "O";
 export type BoardIndex = [number, number];
 
