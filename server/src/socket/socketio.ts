@@ -3,9 +3,16 @@ import {Server, Socket} from "socket.io"
 import { Game, GameState, Player, PlayerAvatar, PlayerInput, PlayerType } from "../types/game";
 import { createEmptyBoard, isWinner } from "../utils/gameLogic";
 import { generateGameCode } from "../utils/gameCodeGenerator";
+import cookie from "cookie"
+import * as jwt from "jsonwebtoken"
+import { AuthTokenPayload } from "../types/jwt";
 
 interface EventResponse<T> {
   (ok: boolean, message: string, data: T) : void
+}
+
+type UsetJWT = {
+  username: string
 }
 
 /*
@@ -34,7 +41,28 @@ const initSocketio = (io: Server) => {
       res?.(true, `Welcome user ${username} type ${type}`, {name: username, type: type});
     })
 
-    socket.on("game:create",(username: string, type: PlayerType, avatar: PlayerAvatar, res: EventResponse<{gameId: UUID, joinCode: string} | null>) => {
+    socket.on("player:authenticate", (res: EventResponse<null>) => {
+      try {
+        const raw = socket.handshake.headers.cookie;
+        if(!raw) throw new Error("No cookie")
+        
+        const {token} = cookie.parse(raw);
+
+        const payload = jwt.verify(token!, process.env.SECRET_KEY!) as AuthTokenPayload;
+
+        socket.data.user = {
+          username: payload.username
+        }
+
+        res?.(true, "User authenticated successfully", null);
+      } catch (error) {
+        if(error instanceof Error)
+          res?.(false, `Player Auth Error: ${error.message}`, null);
+        res?.(false, "Player Auth Error: Unexpected error has occurred", null);
+      }
+    })
+
+    socket.on("game:create",(username: string, type: PlayerType, avatar: PlayerAvatar, res: EventResponse<{gameId: UUID, joinLink: string} | null>) => {
       // check if socket is already in any game
       let isAlready = false;
 
@@ -55,6 +83,7 @@ const initSocketio = (io: Server) => {
         type,
         avatar,
         socketId: socket.id,
+        wins: 0
       }
 
       // create game
@@ -63,7 +92,9 @@ const initSocketio = (io: Server) => {
         turn: type,
         playerX: type === "X" ? player : null,
         playerO: type === "O" ? player : null,
-        createdAt: new Date()
+        createdAt: new Date(),
+        round: 1,
+        totalRounds: 1,
       }
 
       const gameId : UUID = randomUUID(); 
@@ -81,14 +112,17 @@ const initSocketio = (io: Server) => {
       // create and join room
       socket.join(`game:${gameId}`);
 
+      // map joinCode to gameId
+      joinCodeMap.set(joinCode, {gameId});
+
       // create joining link
-      // const joinLink = `${process.env.FRONTEND_URL}/private?join=${gameId}&avl_type=${type === "X"? "O" : "X"}`;
+      const joinLink = `${process.env.FRONTEND_URL}/game/private?join=${joinCode}`;
 
       // send the response
-      res?.(true, "Game created", {gameId, joinCode});
+      res?.(true, "Game created", {gameId, joinLink});
     })
 
-    socket.on("game:checkGame", (joinCode: string, res: EventResponse<{availableSymbols: PlayerType[], availableAvatars: PlayerAvatar[], expiresIn: string} | null>) => {
+    socket.on("game:checkGame", (joinCode: string, res: EventResponse<{gameId: UUID, availableSymbols: PlayerType[], availableAvatars: PlayerAvatar[], expiresIn: string} | null>) => {
       // check for the game
       if(!joinCodeMap.has(joinCode)) {
         res?.(false, "Wrong Code Entered or requested Game does not Exists", null);
@@ -142,10 +176,10 @@ const initSocketio = (io: Server) => {
         return;
       }
 
-      res?.(true, "Game Available to Join", {availableSymbols, availableAvatars, expiresIn: "15 seconds"})
+      res?.(true, "Success: Game Available to Join !!", {gameId: value.gameId, availableSymbols, availableAvatars, expiresIn: "15 seconds"})
     })
 
-    socket.on("game:join", (username: string, gameId: UUID, type: PlayerType, avatar: PlayerAvatar, res: EventResponse<null>) => {
+    socket.on("game:join", (username: string, joinCode: string, gameId: UUID, type: PlayerType, avatar: PlayerAvatar, res: EventResponse<null>) => {      
       // check if user already exists in any game
       let isAlready = false;
       let isGameExists = false;
@@ -193,7 +227,8 @@ const initSocketio = (io: Server) => {
         username,
         avatar,
         socketId: socket.id,
-        type
+        type,
+        wins: 0
       }
       
       // add in game
@@ -206,12 +241,14 @@ const initSocketio = (io: Server) => {
       // join game room
       socket.join(`game:${gameId}`);
 
+      // remove the joinCode
+      joinCodeMap.delete(joinCode);
+
       res?.(true, `Player ${username} joined game ${gameId}`, null);
 
       // broadcast message
       io.to(`game:${gameId}`).emit("game:players", {playerX: game.playerX, playerO: game.playerO});
     })
-
     
     socket.on("game:input", (input: PlayerInput, gameId: UUID, res: EventResponse<null>) => {
       const {username, type, idx} = input;
