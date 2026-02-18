@@ -5,7 +5,7 @@ import App from './App'
 import { SocketProvider } from './contexts/SocketContext'
 import { createBrowserRouter, RouterProvider, type RouteObject } from 'react-router-dom'
 import Game from './pages/Game'
-import JoinPrivateGame from './pages/JoinPrivateGame'
+import JoinPrivate from './pages/JoinPrivate'
 
 const routes : RouteObject[] = [
   {
@@ -18,7 +18,7 @@ const routes : RouteObject[] = [
   },
   {
     path: "/game/private", // /game/private?join=gameCode
-    element: <JoinPrivateGame/> 
+    element: <JoinPrivate/> 
   }
 ]
 const router = createBrowserRouter(routes);
