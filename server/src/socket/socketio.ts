@@ -3,18 +3,13 @@ import {Server, Socket} from "socket.io"
 import { Game, GameState, Player, PlayerAvatar, PlayerInput, PlayerType } from "../types/game";
 import { createEmptyBoard, isWinner } from "../utils/gameLogic";
 import { generateGameCode } from "../utils/gameCodeGenerator";
-import cookie from "cookie"
+import {parse} from "cookie"
 import * as jwt from "jsonwebtoken"
 import { AuthTokenPayload } from "../types/jwt";
 
 interface EventResponse<T> {
   (ok: boolean, message: string, data: T) : void
 }
-
-type UsetJWT = {
-  username: string
-}
-
 /*
   emitters (io):
     1. game:players
@@ -45,9 +40,8 @@ const initSocketio = (io: Server) => {
       try {
         const raw = socket.handshake.headers.cookie;
         if(!raw) throw new Error("No cookie")
-        
-        const {token} = cookie.parse(raw);
-
+          
+        const {token} = parse(raw);
         const payload = jwt.verify(token!, process.env.SECRET_KEY!) as AuthTokenPayload;
 
         socket.data.user = {

@@ -5,6 +5,8 @@ import { GiCyborgFace, GiDwarfFace } from "react-icons/gi";
 import { SiPrimefaces } from "react-icons/si";
 import { useSocket } from "../../hooks/useSocket";
 import { useNavigate } from "react-router-dom";
+import { api } from "../../api/apiClient";
+import { emitAsync } from "../../utils/asyncSocketEmitter";
 
 type PlayerAvatar = {value: "cyborg", icon: IconType} | {value: "dwarf", icon: IconType} | {value: "prime", icon: IconType};
 type CreateGameData = {
@@ -28,29 +30,40 @@ function CreatePrivateGame() {
 
   const handleSubmit: React.SubmitEventHandler<HTMLFormElement> = async (e) => {
     e.preventDefault();
-    if(!isSocketConnected || !socket) return;
-    console.log(symbol, avatar, username);
+    try {
+      if(!isSocketConnected || !socket) return;
+      console.log(symbol, avatar, username);
+  
+      // 1. create token
+      await api.post("/api/auth/user", {username});
+      
+      // 2. authenticate the user
+      await emitAsync(socket, "player:authenticate");
 
-    // make socket create emitter (username, type, avatar)
-    socket.emit("game:create", username, symbol, avatar, async (ok: boolean, message: string, data: CreateGameData | null) => {
-      if(!ok || !data) {
-        console.log("Error while Creating new Game", message);
-        alert(message);
-        return;
-      }
+      const data = await emitAsync<CreateGameData>(
+        socket,
+        "game:create",
+        username, 
+        symbol,
+        avatar
+      )
 
       setIsGameCreated(true);
       const {gameId, joinLink} = data;
 
-      console.log(message);
       alert(`Game ${gameId} Created Successfully. Send this Code to a friend: ${joinLink}`)
-
+  
       alert("Redirecting to game in 3 seconds...")
       // navigate to game 
-      setTimeout(() => {
-        navigate(`/game/${gameId}`)
-      }, 3 * 1000)
-    })  
+      // setTimeout(() => {
+      //   navigate(`/game/${gameId}`)
+      // }, 3 * 1000)
+
+    } catch (error) {
+      console.log("Create Private Error: ", error);
+      if(error instanceof Error)
+        alert(error.message);
+    }
   }
 
   const handleUsernameChange: React.ChangeEventHandler<HTMLInputElement, HTMLInputElement> = (e) => {
