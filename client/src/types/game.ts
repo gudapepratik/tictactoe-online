@@ -10,9 +10,9 @@ export interface EventResponse {
 
 export interface Player {
   username: string
-  socketId: string
   avatar: PlayerAvatar
   type: PlayerType
+  
 }
 
 export interface Game {

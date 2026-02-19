@@ -26,6 +26,7 @@ function CreatePrivateGame() {
   const [username, setUsername] = useState<string>("");
   const {socket, isSocketConnected} = useSocket();
   const [isGameCreated, setIsGameCreated] = useState<boolean>(false);
+  const [isAccountCreated, setIsAccountCreated] = useState<boolean>(false);
   const navigate = useNavigate();
 
   const handleSubmit: React.SubmitEventHandler<HTMLFormElement> = async (e) => {
@@ -33,12 +34,6 @@ function CreatePrivateGame() {
     try {
       if(!isSocketConnected || !socket) return;
       console.log(symbol, avatar, username);
-  
-      // 1. create token
-      await api.post("/api/auth/user", {username});
-      
-      // 2. authenticate the user
-      await emitAsync(socket, "player:authenticate");
 
       const data = await emitAsync<CreateGameData>(
         socket,
@@ -55,14 +50,40 @@ function CreatePrivateGame() {
   
       alert("Redirecting to game in 3 seconds...")
       // navigate to game 
-      // setTimeout(() => {
-      //   navigate(`/game/${gameId}`)
-      // }, 3 * 1000)
+      setTimeout(() => {
+        navigate(`/game/${gameId}`)
+      }, 3 * 1000)
 
     } catch (error) {
       console.log("Create Private Error: ", error);
       if(error instanceof Error)
         alert(error.message);
+    }
+  }
+
+  const handleCreateAccount = async () => {
+    try {
+      if(!socket) return;
+
+      // 1. create token
+      await api.post("/api/auth/user", {username});
+
+      socket.disconnect();
+      socket.connect();
+
+      await new Promise<void>((resolve) => {
+        socket.once("connect", () => resolve());
+      })
+      
+      // 2. authenticate the user
+      await emitAsync(socket, "player:authenticate");
+
+      setIsAccountCreated(true);
+    } catch (error) {
+      if(error instanceof Error)
+        console.log("Create Account Error", error?.message);
+      console.log("Create Account Error");
+      setIsAccountCreated(false);
     }
   }
 
@@ -75,7 +96,10 @@ function CreatePrivateGame() {
       <form onSubmit={handleSubmit} className="flex w-full flex-col gap-8 md:gap-6">
         <div className="flex flex-col items-start w-full gap-1">
           <label htmlFor="username" className="text-zinc-800 text-base md:text-xl">Usern@me</label>
-          <input type="text" name="username" id="username" value={username} required onChange={handleUsernameChange} className="border-4 border-zinc-400 focus:border-zinc-600 focus:scale-[1.02] transition-transform focus:outline-none px-2 w-full text-base md:text-lg text-zinc-800" placeholder="Enter a username..."/>
+          <div className="flex w-full flex-col md:flex-row items-center gap-2 md:gap-0 justify-between">
+            <input type="text" name="username" id="username" disabled={isAccountCreated} value={username} required onChange={handleUsernameChange} className="border-4 border-zinc-400 focus:border-zinc-600 md:w-[70%] w-full focus:scale-[1.02] transition-transform focus:outline-none px-2  text-base md:text-lg text-zinc-800" placeholder="Enter a username..."/>
+            <button type="button" onClick={handleCreateAccount} className={`text-white text-[10px] md:text-lg border-4 w-fit md:px-4 md:py-2 px-3 py-2 rounded-lg md:rounded-2xl ${!isAccountCreated ? "hover:scale-110 bg-red-500 hover:bg-red-600" : "bg-green-500"}   transition-all`}>{!isAccountCreated ? "Create account" : "Account Created"}</button>
+          </div>
         </div>
 
         <div className="flex flex-col items-start w-full gap-1">
@@ -110,6 +134,7 @@ function CreatePrivateGame() {
           <button 
             className={`text-xl md:text-4xl border-4 w-fit  rounded-2xl px-2 md:px-6 py-2 md:py-3 hover:scale-110 bg-red-500 hover:bg-red-600  transition-all`}
             type="submit"
+            disabled={!isAccountCreated}
             >{!isGameCreated ? "Create Game": "Game Created"}</button>
         </div>
       </form>

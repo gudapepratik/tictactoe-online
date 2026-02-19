@@ -10,12 +10,11 @@ async function createUser(req: Request, res: Response) {
 
     if(!username) 
       throw new ApiError(400, "Username not provided");
-
     const secret_key = process.env.SECRET_KEY;
 
     // sign a jwt
-    const token = jwt.sign(username, secret_key!, {
-      expiresIn: "3Hrs"
+    const token = jwt.sign({ username }, secret_key!, {
+      expiresIn: "3h"
     })
 
     // create cookie
@@ -32,6 +31,7 @@ async function createUser(req: Request, res: Response) {
       data: null
     })
   } catch (error) {
+    console.log(error);
     if(error instanceof ApiError) {
       res.status(error.statusCode).json({
         success: error.success,

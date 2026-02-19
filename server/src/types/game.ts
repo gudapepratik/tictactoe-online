@@ -14,6 +14,7 @@ export interface Player {
   socketId: string
   avatar: PlayerAvatar
   type: PlayerType
+  wins: number
 }
 
 export interface Game {
@@ -21,7 +22,9 @@ export interface Game {
   turn: PlayerType;
   playerX: Player | null;
   playerO: Player | null;
-  winner?: "X" | "O" | "draw";
+  totalRounds: number
+  round: number // current round
+  winner?: "X" | "O" | "draw"; // final winner
   createdAt: Date
 }
 
