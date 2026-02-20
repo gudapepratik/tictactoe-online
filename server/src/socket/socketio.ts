@@ -36,19 +36,19 @@ const initSocketio = (io: Server) => {
       res?.(true, `Welcome user ${username} type ${type}`, {name: username, type: type});
     })
 
-    socket.on("player:authenticate", (res: EventResponse<null>) => {
+    socket.on("player:authenticate", (res: EventResponse<{username: string}| null>) => {
       try {
         const raw = socket.handshake.headers.cookie;
         if(!raw) throw new Error("No cookie")
-          
+
         const {token} = parse(raw);
         const payload = jwt.verify(token!, process.env.SECRET_KEY!) as AuthTokenPayload;
 
         socket.data.user = {
           username: payload.username
         }
-
-        res?.(true, "User authenticated successfully", null);
+        
+        res?.(true, "User authenticated successfully", {username: payload.username});
       } catch (error) {
         if(error instanceof Error)
           res?.(false, `Player Auth Error: ${error.message}`, null);
@@ -57,11 +57,11 @@ const initSocketio = (io: Server) => {
     })
 
     socket.on("game:create",(username: string, type: PlayerType, avatar: PlayerAvatar, res: EventResponse<{gameId: UUID, joinLink: string} | null>) => {
-      // check if socket is already in any game
+      // check if player is already in any game
       let isAlready = false;
 
       for(const game of games.values()) {
-        if(game?.playerX?.socketId === socket.id || game?.playerO?.socketId === socket.id) {
+        if(game?.playerX?.username === username || game?.playerO?.username === username) {
           isAlready = true;
           break;
         }
@@ -76,8 +76,9 @@ const initSocketio = (io: Server) => {
         username,
         type,
         avatar,
-        socketId: socket.id,
-        wins: 0
+        // socketId: socket.id,
+        wins: 0,
+        isHost: true
       }
 
       // create game
@@ -89,6 +90,7 @@ const initSocketio = (io: Server) => {
         createdAt: new Date(),
         round: 1,
         totalRounds: 1,
+        isStarted: false
       }
 
       const gameId : UUID = randomUUID(); 
@@ -104,7 +106,7 @@ const initSocketio = (io: Server) => {
       }
 
       // create and join room
-      socket.join(`game:${gameId}`);
+      // socket.join(`game:${gameId}`);
 
       // map joinCode to gameId
       joinCodeMap.set(joinCode, {gameId});
@@ -181,7 +183,7 @@ const initSocketio = (io: Server) => {
       for(const game of games.entries()) {
         if(game[0] === gameId) isGameExists = true;
         if(!isAlready) {
-          if(game[1]?.playerX?.socketId === socket.id || game[1]?.playerO?.socketId === socket.id) {
+          if(game[1]?.playerX?.username === username || game[1]?.playerO?.username === username) {
             isAlready = true;
           }
         }
@@ -220,9 +222,10 @@ const initSocketio = (io: Server) => {
       const player : Player = {
         username,
         avatar,
-        socketId: socket.id,
+        // socketId: socket.id,
         type,
-        wins: 0
+        wins: 0,
+        isHost: false
       }
       
       // add in game
@@ -233,7 +236,7 @@ const initSocketio = (io: Server) => {
       }
 
       // join game room
-      socket.join(`game:${gameId}`);
+      // socket.join(`game:${gameId}`);
 
       // remove the joinCode
       joinCodeMap.delete(joinCode);
@@ -242,6 +245,67 @@ const initSocketio = (io: Server) => {
 
       // broadcast message
       io.to(`game:${gameId}`).emit("game:players", {playerX: game.playerX, playerO: game.playerO});
+    })
+
+    socket.on("game:connect", (gameId: UUID, res: EventResponse<Game | null>) => {
+      try {
+        // 1. check if game exitsts
+        const game = games.get(gameId);
+        if(!game) throw new Error("Game not found !");
+        
+        // 2. username
+        const playerUsername = socket.data?.user?.username;
+        if(!playerUsername) throw new Error("Player username not found !")
+        
+        // 3. check if player exists in game
+        if(game.playerO?.username !== playerUsername && game.playerX?.username !== playerUsername)
+          throw new Error(`Player does not exists in Game ${gameId}`)
+
+        // join socket to room
+        socket.join(`game:${gameId}`);
+        
+        // 4. send game state (full)
+        res?.(true, "Player connected to game..", game);
+      } catch (error) {
+        if(error instanceof Error) {
+          res?.(false, error.message, null);
+        } else {
+          res?.(false, "Game Connect Error: Unexpected error occurred !", null);
+        }
+      }
+    })
+
+    socket.on("game:start", (gameId: UUID, totalRounds: number, res: EventResponse<null>) => {
+      try {
+        const playerUsername = socket.data.user.username;
+        if(!playerUsername) throw new Error("Username not Found")
+        if(totalRounds > 10) throw new Error("Game rounds can't be > 10")
+
+        const game = games.get(gameId);
+        if(!game) throw new Error("Game Not found")
+    
+        // check if game is already started or running
+        if(game.isStarted) throw new Error("Game has already started")
+        // get player check if host or not
+        const player : Player | null = game.playerX?.username === playerUsername ? game.playerX : game.playerO?.username === playerUsername ? game.playerO : null
+        if(!player) throw new Error("Player Instance not matching")
+        if(!player.isHost) throw new Error("Only host can start the game")
+
+        // start the game
+        game.totalRounds = totalRounds;
+        game.round = 1;
+        game.isStarted = true;
+        
+        io.to(`game:${gameId}`).emit("game:started", {totalRounds: totalRounds, round: 1, isStarted: true});
+        
+        res?.(true, "Game has started !!", null);
+      } catch (error) {
+        console.log("game:start Error: ", error);
+        if(error instanceof Error) {
+          res?.(false, error.message, null)
+        }
+        res?.(false, "Game Start Error: Unexpected error occurred", null);
+      }
     })
     
     socket.on("game:input", (input: PlayerInput, gameId: UUID, res: EventResponse<null>) => {
@@ -262,7 +326,7 @@ const initSocketio = (io: Server) => {
         return;
       }
 
-      if(player.username !== username && player.socketId !== socket.id) {
+      if(player.username !== username && player.username !== username) {
         res?.(false, "Game Input Error: Username / Socket does not match with the Player instance !!", null);
         return;
       }

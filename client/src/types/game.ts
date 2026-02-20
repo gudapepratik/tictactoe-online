@@ -10,17 +10,23 @@ export interface EventResponse {
 
 export interface Player {
   username: string
+  // socketId: string
   avatar: PlayerAvatar
   type: PlayerType
-  
+  wins: number
+  isHost: boolean
 }
 
 export interface Game {
   board: Board;
   turn: PlayerType;
-  playerX: Player | null;
-  playerO: Player | null;
-  winner?: "X" | "O" | "draw";
+  playerX: Player;
+  playerO: Player;
+  totalRounds: number
+  round: number // current round
+  winner?: "X" | "O" | "draw"; // final winner
+  createdAt: Date
+  isStarted: boolean
 }
 
 export interface PlayerInput {

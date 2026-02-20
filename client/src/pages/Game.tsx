@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { GiCyborgFace, GiDwarfFace } from "react-icons/gi";
 import { SiPrimefaces } from "react-icons/si";
@@ -8,52 +8,138 @@ import PlayersList from "../components/PlayersList";
 import GameSettings from "../components/GameSettings";
 import GameBoard from "../components/GameBoard";
 import { useSocket } from "../hooks/useSocket";
+import type { Game, PlayerAvatar } from "../types/game";
+import { emitAsync } from "../utils/asyncSocketEmitter";
+import { useGameListeners } from "../hooks/useGameListeners";
 
 type Player =  {
-  avatar: IconType
+  avatar?: IconType
   username: string
   type: "X" | "O"
   wins: number
   borderColor: string
 }
 
-const players: Player[]= [
-  {
-    avatar: GiCyborgFace,
-    username: "Pratik_23",
-    type: "X",
-    wins: 2,
-    borderColor: "border-red-500"
-  },
-  {
-    avatar: GiDwarfFace,
-    username: "a14an251",
-    type: "O",
-    wins: 4,
-    borderColor: "border-blue-500"
-  }
-]
+// const players: Player[]= [
+//   {
+//     avatar: GiCyborgFace,
+//     username: "Pratik_23",
+//     type: "X",
+//     wins: 2,
+//     borderColor: "border-red-500"
+//   },
+//   {
+//     avatar: GiDwarfFace,
+//     username: "a14an251",
+//     type: "O",
+//     wins: 4,
+//     borderColor: "border-blue-500"
+//   }
+// ]
+
+const avatarIconMap : Map<PlayerAvatar,IconType> = new Map([
+  ["cyborg", GiCyborgFace],
+  ["prime", SiPrimefaces],
+  ["dwarf", GiDwarfFace]
+])
 
 function Game() {
   const params = useParams();
   const [gameId, setGameId] = useState<string | undefined>(undefined);
   const [gameRounds, setGameRounds] = useState<number>(1);
   const {socket, isSocketConnected} = useSocket();
+  const [username, setUsername] = useState<string>("");
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [turn, setTurn] = useState<"X" | "O">();
+  const [totalRounds, setTotalRounds] = useState<number>(0);
+  const [round, setRound] = useState<number>(0);
+  const [winner, setWinner] = useState<"X" | "O" | "draw" | undefined>();
+  const [isHost, setIsHost] = useState<boolean>(false);
+  const [isGameStarted, setIsGameStarted] = useState<boolean>(false);
 
   useEffect(() => {
     setGameId(params.gameId);
-    console.log(params.gameId)
 
-    if(!socket) return;
+    if(!socket || !params.gameId) return;
+    connectToGame(params.gameId);
 
     // connect/reconnect to the game
     // socket.emit("game:connect");
     
-  }, [isSocketConnected]);
+  }, [socket]);
+
+  const connectToGame = async (gameId: string) => {
+    try {
+      if(!socket) return;
+      socket.disconnect();
+      socket.connect();
+      
+      await new Promise<void>((resolve) => {
+        socket.once("connect", () => resolve());
+      })
+
+      // 1. authenticate the user
+      const data = await emitAsync<{username: string}>(socket!, "player:authenticate");
+      console.log(data);
+      // 2. connect to game
+      const gameState = await emitAsync<Game>(socket!, "game:connect", gameId);
+
+      setUsername(data.username);
+      console.log(gameState);
+
+      if(gameState.playerX) {
+        players.push({
+          username: gameState.playerX.username,
+          avatar: avatarIconMap.get(gameState.playerX.avatar),
+          type: gameState.playerX.type,
+          wins: gameState.playerX.wins,
+          borderColor: "border-red-500"
+        })
+
+        if(data.username === gameState.playerX.username && gameState.playerX.isHost) {
+          setIsHost(true);
+        }
+      }
+      if(gameState.playerO) {
+        players.push({
+          username: gameState.playerO.username,
+          avatar: avatarIconMap.get(gameState.playerO.avatar),
+          type: gameState.playerO.type,
+          wins: gameState.playerO.wins,
+          borderColor: "border-green-500"
+        })
+
+        if(data.username === gameState.playerO.username && gameState.playerO.isHost) {
+          setIsHost(true);
+        }
+      }
+
+      setTotalRounds(gameState.totalRounds);
+      setRound(gameState.round);
+      setTurn(gameState.turn);
+      setWinner(gameState.winner);
+    } catch (error) {
+      console.log("Error while connecting with game", error)
+    }
+  }
 
   const startGame = async () => {
-    console.log(gameRounds)
-    console.log("Game Started !!!")
+    try {
+      if(gameRounds <= 0 || gameRounds > 10) throw new Error("Game rounds can only be > 0 and < 10")
+
+      if(!socket) return;
+
+      socket.emit("game:start", gameId, gameRounds, (ok: boolean, message: string, data: null) => {
+        if(!ok) {
+          console.log(message);
+          alert("Error while starting the game");
+        }
+      })
+    } catch (error) {
+      if(error instanceof Error)
+        console.log("Game Start Error: ", error.message);
+      console.log("Game Start Error: ", error);
+    }
   }
 
   const handleResetGame = async () => {
@@ -64,6 +150,16 @@ function Game() {
 
   }
 
+  useGameListeners({
+    onGameStart: (data) => {
+      setTotalRounds(data.totalRounds)
+      setGameRounds(data.totalRounds)
+      setRound(data.round)
+      setIsGameStarted(data.isStarted)
+      alert("Game Started !!!")
+    }
+  })
+  
   return (
     <div className="bg-primaryBG w-full h-screen crt">
       <div className="w-full h-full flex flex-col justify-start p-4 md:p-6">
@@ -87,7 +183,7 @@ function Game() {
             />
 
             <GameContainer
-              children = {<GameSettings setRounds={setGameRounds} startGame={startGame} rounds={gameRounds}/>}
+              children = {<GameSettings isHost={isHost} setRounds={setGameRounds} startGame={startGame} rounds={gameRounds}/>}
               isCollapsable = {true}
               title="Settings"
               width="350px"

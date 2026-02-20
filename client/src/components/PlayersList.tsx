@@ -1,7 +1,7 @@
 import type { IconType } from "react-icons";
 
 type Player =  {
-  avatar: IconType
+  avatar?: IconType
   username: string
   type: "X" | "O"
   wins: number
@@ -27,7 +27,7 @@ function PlayersList({players, turn}: props) {
         <tbody className="text-center">
           {players.map((p, idx) => (
             <tr key={idx} style={{height: "50px"}} className={` ${turn === p.type ? `border-4  ${p.borderColor}`: ``} `}>
-              <td><div className="flex justify-center items-center"><p.avatar className="text-[33px] md:text-4xl"/></div></td>
+              <td><div className="flex justify-center items-center">{p.avatar && <p.avatar className="text-[33px] md:text-4xl"/>}</div></td>
               <td className="">{p.username} <p className="text-sm">{"(" + p.type + ")"}</p> </td>
               <td>{p.wins}</td>
             </tr>
