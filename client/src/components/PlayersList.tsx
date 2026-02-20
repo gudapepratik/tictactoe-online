@@ -6,6 +6,7 @@ type Player =  {
   type: "X" | "O"
   wins: number
   borderColor: string
+  connected: boolean
 }
 
 type props = {
@@ -13,12 +14,14 @@ type props = {
   turn: "X" | "O" // whose turn ?
 }
 function PlayersList({players, turn}: props) {
+  console.log(players)
   return (
     <div className="w-full p-2 font-pressStart2P text-[12px]">
       <table className="w-full">
         <thead className="" style={{height: "40px"}}>
           <tr>
             <th>Avatar</th>
+            <th>Status</th>
             <th>Username</th>
             <th>Wins</th>
           </tr>
@@ -26,8 +29,9 @@ function PlayersList({players, turn}: props) {
 
         <tbody className="text-center">
           {players.map((p, idx) => (
-            <tr key={idx} style={{height: "50px"}} className={` ${turn === p.type ? `border-4  ${p.borderColor}`: ``} `}>
+            <tr key={p.username} style={{height: "50px"}} className={` ${turn === p.type ? `border-4  ${p.borderColor}`: ``} `}>
               <td><div className="flex justify-center items-center">{p.avatar && <p.avatar className="text-[33px] md:text-4xl"/>}</div></td>
+              <td>{p.connected ? (<div className="h-2 w-2 bg-green-500 rounded-full"></div>) : (<div className="h-2 w-2 bg-red-500 rounded-full"></div>)}</td>
               <td className="">{p.username} <p className="text-sm">{"(" + p.type + ")"}</p> </td>
               <td>{p.wins}</td>
             </tr>

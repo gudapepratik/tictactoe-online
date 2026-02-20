@@ -15,6 +15,7 @@ export interface Player {
   type: PlayerType
   wins: number
   isHost: boolean
+  connected: boolean
 }
 
 export interface Game {

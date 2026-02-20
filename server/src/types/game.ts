@@ -1,3 +1,5 @@
+import { UUID } from "node:crypto";
+
 export type Cell = "X" | "O" | "E";
 export type Board = Cell[][];
 export type PlayerAvatar = "cyborg" | "dwarf" | "prime";
@@ -8,6 +10,11 @@ export interface EventResponse {
   (ok: boolean, message: string, data: any) : void
 }
 
+export type Session = {
+  username: string
+  gameId: UUID
+  type: PlayerType
+}
 
 export interface Player {
   username: string
@@ -16,6 +23,7 @@ export interface Player {
   type: PlayerType
   wins: number
   isHost: boolean
+  connected: boolean
 }
 
 export interface Game {

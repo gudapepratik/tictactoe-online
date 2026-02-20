@@ -18,6 +18,7 @@ type Player =  {
   type: "X" | "O"
   wins: number
   borderColor: string
+  connected: boolean
 }
 
 // const players: Player[]= [
@@ -61,6 +62,7 @@ function Game() {
     setGameId(params.gameId);
 
     if(!socket || !params.gameId) return;
+    console.log("called")
     connectToGame(params.gameId);
 
     // connect/reconnect to the game
@@ -87,13 +89,16 @@ function Game() {
       setUsername(data.username);
       console.log(gameState);
 
+      let newPlayers : Player[] = [];
+
       if(gameState.playerX) {
-        players.push({
+        newPlayers.push({
           username: gameState.playerX.username,
           avatar: avatarIconMap.get(gameState.playerX.avatar),
           type: gameState.playerX.type,
           wins: gameState.playerX.wins,
-          borderColor: "border-red-500"
+          borderColor: "border-red-500",
+          connected: gameState.playerX.connected
         })
 
         if(data.username === gameState.playerX.username && gameState.playerX.isHost) {
@@ -101,19 +106,22 @@ function Game() {
         }
       }
       if(gameState.playerO) {
-        players.push({
+        newPlayers.push({
           username: gameState.playerO.username,
           avatar: avatarIconMap.get(gameState.playerO.avatar),
           type: gameState.playerO.type,
           wins: gameState.playerO.wins,
-          borderColor: "border-green-500"
+          borderColor: "border-green-500",
+          connected: gameState.playerO.connected
         })
 
         if(data.username === gameState.playerO.username && gameState.playerO.isHost) {
           setIsHost(true);
         }
       }
+      console.log(newPlayers)
 
+      setPlayers(newPlayers);
       setTotalRounds(gameState.totalRounds);
       setRound(gameState.round);
       setTurn(gameState.turn);
@@ -157,9 +165,38 @@ function Game() {
       setRound(data.round)
       setIsGameStarted(data.isStarted)
       alert("Game Started !!!")
+    },
+    onPlayerConnected: (data) => {
+      console.log(data)
+      // mark coonected: true if already exists, else add
+      const player = players.find(p => p.username === data.username);
+      if(player) {
+        // mark connected
+        setPlayers(p => p.map(pl => (pl.username === player.username ? {...pl, connected: true} : pl)))
+      } else {
+        console.log(players)
+        // add the new player
+        let p = players;
+        p.push({
+          username: data.username,
+          avatar: avatarIconMap.get(data.avatar),
+          type: data.type,
+          wins: data.wins,
+          borderColor: data.type === "X" ? "border-red-500" : "border-green-500",
+          connected: data.connected
+        })
+        setPlayers(p);
+      }
+      console.log("New player connected")
+    },
+    onPlayerOffline: (data) => {
+      console.log(data)
+      // mark the player offline
+      setPlayers(p => p.map((player) => (player.username === data.username ? {...player, connected: false} : player)))
+      console.log("Player offline")
     }
   })
-  
+
   return (
     <div className="bg-primaryBG w-full h-screen crt">
       <div className="w-full h-full flex flex-col justify-start p-4 md:p-6">
@@ -174,7 +211,7 @@ function Game() {
           {/* Player and Setting section  */}
           <div className="w-full md:w-1/3  h-full md:justify-center mt-5 md:mt-0 justify-start flex flex-col gap-10">
             <GameContainer
-              children = {<PlayersList players={players} turn="O"/>}
+              children = {<PlayersList players={players} turn={turn!}/>}
               isCollapsable = {true}
               title="Players"
               width="350px"

@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useSocket } from "./useSocket";
+import type { Player, PlayerAvatar, PlayerType } from "../types/game";
 
 type GameStartData = {
   totalRounds: number
@@ -7,22 +8,48 @@ type GameStartData = {
   isStarted: boolean
 }
 
-type props = {
-  onGameStart: (data: GameStartData) => void
+type PlayerOfflineData = {
+  username: string
+  type: PlayerType
 }
 
-export function useGameListeners({onGameStart}: props) {
+type PlayerConnectedData = {
+  username: string;
+  avatar: PlayerAvatar;
+  type: PlayerType;
+  wins: number;
+  isHost: boolean;
+  connected: boolean;
+}
+
+type props = {
+  onGameStart: (data: GameStartData) => void
+  onPlayerOffline: (data: PlayerOfflineData) => void
+  onPlayerConnected: (data: Player) => void
+}
+
+
+// player:connected
+// player:offline
+
+export function useGameListeners({onGameStart, onPlayerOffline, onPlayerConnected}: props) {
   const {socket} = useSocket();
 
   useEffect(() => {
     if(!socket) return;
 
     const handleGameStart = (data: GameStartData) => onGameStart?.(data);
+    const handlePlayerOffline = (data: PlayerOfflineData) => onPlayerOffline?.(data)
+    const handlePlayerConnected = (data: PlayerConnectedData) => onPlayerConnected?.(data)
 
     socket.on("game:started", handleGameStart);
+    socket.on("player:offline", handlePlayerOffline);
+    socket.on("player:connected", handlePlayerConnected);
 
     return () => {
       socket.off("game:started", handleGameStart);
+      socket.off("player:offline", handlePlayerOffline);
+      socket.off("player:connected", handlePlayerConnected);
     }
-  },[socket, onGameStart]);
+  },[socket, onGameStart, onPlayerOffline, onPlayerConnected]);
 }

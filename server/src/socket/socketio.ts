@@ -1,6 +1,6 @@
 import { randomUUID, UUID } from "node:crypto";
 import {Server, Socket} from "socket.io"
-import { Game, GameState, Player, PlayerAvatar, PlayerInput, PlayerType } from "../types/game";
+import { Game, GameState, Player, PlayerAvatar, PlayerInput, PlayerType, Session } from "../types/game";
 import { createEmptyBoard, isWinner } from "../utils/gameLogic";
 import { generateGameCode } from "../utils/gameCodeGenerator";
 import {parse} from "cookie"
@@ -22,6 +22,7 @@ interface EventResponse<T> {
 
 let games: Map<UUID,Game> = new Map(); // <roomId, Game>
 let joinCodeMap : Map<string, {gameId: UUID, socketId?: string, lockExpiryBy?: Date}> = new Map(); // to map game code to gameid
+let sessions: Map<string, Session> = new Map();
 
 const initSocketio = (io: Server) => {
   console.log("Socket Server running")
@@ -29,6 +30,20 @@ const initSocketio = (io: Server) => {
     console.log(`Socket client ${socket.id} connected !!`)
 
     socket.on("disconnect", () => {
+      const username = socket.data?.user?.username;
+      const playerSession = sessions.get(username);
+      if(!playerSession) return;
+
+      const game = games.get(playerSession.gameId);
+      if(!game) return;
+
+      const player = game.playerO?.username === playerSession.username ? game.playerO : game.playerX?.username === playerSession.username ? game.playerX : null;
+      if(!player) return;
+
+      player.connected = false;
+      sessions.delete(username);
+
+      io.to(`game:${playerSession.gameId}`).emit("player:offline", {username: playerSession.username, type: playerSession.type});
       console.log(`Socket client ${socket.id} disconnected !!`)
     })
 
@@ -78,7 +93,8 @@ const initSocketio = (io: Server) => {
         avatar,
         // socketId: socket.id,
         wins: 0,
-        isHost: true
+        isHost: true,
+        connected: false
       }
 
       // create game
@@ -225,7 +241,8 @@ const initSocketio = (io: Server) => {
         // socketId: socket.id,
         type,
         wins: 0,
-        isHost: false
+        isHost: false,
+        connected: false
       }
       
       // add in game
@@ -258,14 +275,25 @@ const initSocketio = (io: Server) => {
         if(!playerUsername) throw new Error("Player username not found !")
         
         // 3. check if player exists in game
-        if(game.playerO?.username !== playerUsername && game.playerX?.username !== playerUsername)
+        const player = game.playerO?.username === playerUsername ? game.playerO : game.playerX?.username === playerUsername ? game.playerX : null;
+        if(!player)
           throw new Error(`Player does not exists in Game ${gameId}`)
+        
+        // create player session
+        sessions.set(playerUsername, {
+          gameId: gameId,
+          type: player.type,
+          username: playerUsername
+        })
+        player.connected = true;
 
         // join socket to room
         socket.join(`game:${gameId}`);
         
         // 4. send game state (full)
         res?.(true, "Player connected to game..", game);
+
+        socket.to(`game:${gameId}`).emit("player:connected", player);
       } catch (error) {
         if(error instanceof Error) {
           res?.(false, error.message, null);
@@ -286,6 +314,10 @@ const initSocketio = (io: Server) => {
     
         // check if game is already started or running
         if(game.isStarted) throw new Error("Game has already started")
+
+        // check if both players are joined
+        if(!game.playerX || !game.playerO) throw new Error("Other player has not joined yet !!")
+
         // get player check if host or not
         const player : Player | null = game.playerX?.username === playerUsername ? game.playerX : game.playerO?.username === playerUsername ? game.playerO : null
         if(!player) throw new Error("Player Instance not matching")
