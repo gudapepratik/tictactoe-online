@@ -4,7 +4,6 @@ A real-time multiplayer Tic-Tac-Toe game built with React, Express, and Socket.i
 
 ## Features
 
-- **Public matchmaking** – get paired with a random opponent
 - **Private games** – create a game and share a code with a friend
 - **Multi-round sessions** – play multiple rounds and track wins
 - **Player avatars** – choose from three unique avatars
@@ -92,7 +91,7 @@ cd server && npm start
 ## How to Play
 
 1. Open the app and choose an avatar.
-2. Select **Play Public** to be matched with a random opponent, or **Play Private** to create a game with a shareable code.
+2. Select **Play Private** to create a game and get a shareable code.
 3. Share the game code with a friend so they can join your private game.
 4. Take turns placing your mark (X or O) on the 3×3 grid.
 5. The first player to get three in a row wins the round.
