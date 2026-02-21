@@ -45,8 +45,10 @@ export interface PlayerInput {
 }
 
 export interface GameState {
-  idx: BoardIndex;
+  idx: number; // 0 - 8
   player: string; // username
   symbol: "X" | "O";
-  winner: string | null;
+  isGameOver: boolean
+  roundWinner: "X" | "O" | null
+  gameWinner: "X" | "O" | "draw" | null
 }

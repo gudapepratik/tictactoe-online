@@ -1,7 +1,7 @@
 import { randomUUID, UUID } from "node:crypto";
 import {Server, Socket} from "socket.io"
 import { Game, GameState, Player, PlayerAvatar, PlayerInput, PlayerType, Session } from "../types/game";
-import { createEmptyBoard, isWinner } from "../utils/gameLogic";
+import { createEmptyBoard, isWinner, resetBoard } from "../utils/gameLogic";
 import { generateGameCode } from "../utils/gameCodeGenerator";
 import {parse} from "cookie"
 import * as jwt from "jsonwebtoken"
@@ -340,57 +340,76 @@ const initSocketio = (io: Server) => {
       }
     })
     
-    socket.on("game:input", (input: PlayerInput, gameId: UUID, res: EventResponse<null>) => {
-      const {username, type, idx} = input;
-      const [row, col] = idx;
+    socket.on("game:makeMove", (gameId: UUID, idx: number, res: EventResponse<null>) => {
+      try {
+        if(idx < 0 || idx > 8) throw new Error("Invalid Cell index")
 
-      const game = games.get(`game:${gameId}`);
-      
-      if(!game) {
-        res?.(false, "Game Input Error: Game not Found !!", null);
-        return ;
+        const game = games.get(gameId);
+        
+        if(!game) throw new Error("Game not Found !!")
+        const session = sessions.get(socket.data?.user?.username);
+
+        if(!session) throw new Error("Player not connected to the game")
+        const player : Player | null = game.playerX?.username === session.username ? game.playerX : game.playerO?.username === session.username ? game.playerO : null;
+        if(!player || !player.connected) throw new Error("Player not found or currently offline !!")
+        if(player.type !== game.turn) throw new Error("Invalid Move, Other players turn")
+        
+        const row = Math.floor(idx / 3);
+        const col = idx % 3;
+
+        if(game.board[row][col] !== "E") throw new Error("Invalid Move, Cell already filled")
+        
+        game.board[row][col] = game.turn === "X" ? "X" : "O";
+        
+        const isWin = isWinner(game.board, [row, col], game.turn);
+        if(isWin) {
+          player.wins += 1;
+
+          // reset board
+          resetBoard(game.board);
+
+          // next round
+          if(game.totalRounds === game.round) {
+            // game over. find the final winner
+            if(game.playerO?.wins! === game.playerO?.wins) {
+              game.winner = "draw";
+            } else if(game.playerX?.wins! > game.playerO?.wins!) {
+              game.winner = "X";
+            } else {
+              game.winner = "O";
+            }
+          } else {
+            game.round += 1; // next round
+          }
+        }
+        game.turn = game.turn === "X" ? "O" : "X";
+
+        const gameState : GameState = {
+          idx: idx,
+          player: player.username,
+          symbol: player.type,
+          roundWinner: isWin ? player.type : null,
+          gameWinner: game.winner ? game.winner : null,
+          isGameOver: game.winner !== undefined
+        }
+  
+        // broadcast the game state
+        io.to(`game:${gameId}`).emit("game:update", gameState);
+  
+        // ack response
+        res?.(true, "Game Input: input Registered successfully !", null);
+      } catch (error) {
+        if(error instanceof Error) {
+          res?.(false, error.message, null);
+          console.log("Player Move Error", error?.message);
+          return;
+        }
+        res?.(false, "Player Move Error: Unexpected Error occurred", null);
+        console.log("Player Move Error: Unexpected Error occurred");
       }
-
-      const player : Player | null = type === "X" ? game.playerX : game.playerO;
-
-      if(!player) {
-        res?.(false, "Game Input Error: Game Player instance not Found !!", null);
-        return;
-      }
-
-      if(player.username !== username && player.username !== username) {
-        res?.(false, "Game Input Error: Username / Socket does not match with the Player instance !!", null);
-        return;
-      }
-
-      if(game.board[row][col] !== "E") {
-        res?.(false, "Game Input Error: Invalid Move, Cell already Filled !!", null);
-        return;
-      }
-
-      if(game.turn !== type) {
-        res?.(false, "Game Input Error: Invalid Move, It's not Your turn !!", null);
-        return;
-      }
-
-      game.board[row][col] = type === "X" ? "X" : "O";
-      game.turn = type === "X" ? "O" : "X";
-
-      const win = isWinner(game.board, idx, type);
-
-      const gameState : GameState = {
-        idx: idx,
-        player: player.username,
-        symbol: input.type,
-        winner: win ? player.username : null
-      }
-
-      // broadcast the game state
-      io.to(`game:${gameId}`).emit("game:update", {gameState});
-
-      // ack response
-      res?.(true, "Game Input: input Registered successfully !", null);
     })
+
+
   })
 }
 
