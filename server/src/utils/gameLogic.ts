@@ -57,3 +57,11 @@ export function createEmptyBoard(): Board {
     Array.from({length: 3}, () => "E" as Cell)
   )
 }
+
+export function resetBoard(board: Board) : void {
+  board.forEach((row) => {
+    row.forEach((_, i, arr) => {
+      arr[i] = "E"
+    })
+  })
+}

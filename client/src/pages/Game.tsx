@@ -44,6 +44,8 @@ const avatarIconMap : Map<PlayerAvatar,IconType> = new Map([
   ["dwarf", GiDwarfFace]
 ])
 
+type Cell = "X" | "O" | null
+
 function Game() {
   const params = useParams();
   const [gameId, setGameId] = useState<string | undefined>(undefined);
@@ -51,10 +53,12 @@ function Game() {
   const {socket, isSocketConnected} = useSocket();
   const [username, setUsername] = useState<string>("");
   const [players, setPlayers] = useState<Player[]>([]);
-  const [turn, setTurn] = useState<"X" | "O">();
+  const [turn, setTurn] = useState<"X" | "O">("X");
+  const [board, setBoard] = useState<Cell[]>(Array(9).fill(null));
   const [totalRounds, setTotalRounds] = useState<number>(0);
   const [round, setRound] = useState<number>(0);
-  const [winner, setWinner] = useState<"X" | "O" | "draw" | undefined>();
+  const [roundWinner, setRoundWinner] = useState<"X" | "O"| null>(null);
+  const [winner, setWinner] = useState<"X" | "O" | "draw" | null>(null);
   const [isHost, setIsHost] = useState<boolean>(false);
   const [isGameStarted, setIsGameStarted] = useState<boolean>(false);
 
@@ -150,6 +154,20 @@ function Game() {
     }
   }
 
+  const handlePlayerMove = async (idx: number) => {
+    try {
+      if(!socket) throw new Error("Socket not available");
+      console.log(gameId);
+      socket.emit("game:makeMove", gameId, idx, (ok: boolean, message: string, data: null) => {
+        if(!ok) {
+          console.log("Error", message);
+        }
+      })
+    } catch (error) {
+      console.log("Player move Error", error);
+    }
+  }
+
   const handleResetGame = async () => {
 
   }
@@ -194,6 +212,26 @@ function Game() {
       // mark the player offline
       setPlayers(p => p.map((player) => (player.username === data.username ? {...player, connected: false} : player)))
       console.log("Player offline")
+    },
+    onPlayerMove: (data) => {
+      const {idx, player, symbol, roundWinner, gameWinner, isGameOver} = data;
+      
+      if(isGameOver) {
+        setWinner(gameWinner);
+      }
+      if(roundWinner) {
+        setRoundWinner(roundWinner);
+        // reset the board
+        setBoard(board => board.map((cell) => (cell = null)));
+        // next round
+        setRound(prev => prev + 1);
+      } else {
+        setBoard(board => board.map((cellValue, i) => (i === idx ? symbol : cellValue)));
+      }
+      const nextTurn = symbol === "X" ? "O" : "X";
+      setTurn(nextTurn);
+
+      console.log("Game update recieved");
     }
   })
 
@@ -235,7 +273,9 @@ function Game() {
             <h4 className="font-pressStart2P text-blue-500 text-[10px] text-nowrap md:text-sm">It's your tua_231"...</h4>
 
             {/* Board  */}
-            <GameBoard/>
+            <GameBoard turn={turn} board={board} handlePlayerMove={handlePlayerMove}/>
+
+            {turn}
 
             {/* Reset and End Buttons  */}
             <div className="flex items-center justify-center gap-4">
