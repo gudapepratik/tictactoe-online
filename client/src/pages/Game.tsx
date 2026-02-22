@@ -215,6 +215,7 @@ function Game() {
     },
     onPlayerMove: (data) => {
       const {idx, player, symbol, roundWinner, gameWinner, isGameOver} = data;
+      console.log(data);
       
       if(isGameOver) {
         setWinner(gameWinner);

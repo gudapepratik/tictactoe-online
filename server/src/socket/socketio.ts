@@ -371,7 +371,7 @@ const initSocketio = (io: Server) => {
           // next round
           if(game.totalRounds === game.round) {
             // game over. find the final winner
-            if(game.playerO?.wins! === game.playerO?.wins) {
+            if(game.playerO?.wins! === game.playerX?.wins!) {
               game.winner = "draw";
             } else if(game.playerX?.wins! > game.playerO?.wins!) {
               game.winner = "X";
