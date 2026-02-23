@@ -2,13 +2,24 @@ import { useEffect, useState } from "react";
 import { useSocket } from "./hooks/useSocket"
 import Modal from "./components/Modal";
 import CreatePrivateGame from "./components/ui/CreatePrivateGame";
+import PopupGameUpdate from "./components/PopupGameUpdate";
 
 function App() {
   const {isSocketConnected} = useSocket();
   const [showCreatePrivateModal, setShowCreatePrivateModal] = useState(false);
 
+  const [close ,setClose] = useState<boolean>(false);
   return (
     <>
+      {!close && 
+        <PopupGameUpdate
+          type="notification"
+          notification={{
+            title: "You won the game",
+            message: "Hey, you really won the game, congratulations !!!"
+          }}
+          close={setClose}
+      />}
       {showCreatePrivateModal && <Modal children={<CreatePrivateGame/>} setCloseModal={setShowCreatePrivateModal} title="Private Game" width='70%' height="" extraStyles={{titleStyles: "text-zinc-800", containerStyles: "bg-white", closeBtnStyles: "text-zinc-900"}}/>}
       <div className={`absolute font-pressStart2P top-5 left-5 ${isSocketConnected ? "text-green-500": "text-red-500"}  z-50`}>{isSocketConnected ? "Connected" : "Not Connected"}</div>
       <div className="w-full h-screen crt font-luckyGuy flex items-center justify-center bg-primaryBG">
