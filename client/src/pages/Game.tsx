@@ -34,7 +34,7 @@ function Game() {
   const params = useParams();
   const [gameId, setGameId] = useState<string | undefined>(undefined);
   const [gameRounds, setGameRounds] = useState<number>(1);
-  const { socket, isSocketConnected } = useSocket();
+  const {socket, isSocketConnected} = useSocket();
   const [username, setUsername] = useState<string>("");
   const [players, setPlayers] = useState<Player[]>([]);
   const [turn, setTurn] = useState<"X" | "O">("X");
@@ -70,7 +70,6 @@ function Game() {
     }
   }, [popup, popupQueue]);
 
-  // ── Connect to game ──────────────────────────────────────────────
   useEffect(() => {
     setGameId(params.gameId);
     if (!socket || !params.gameId) return;
@@ -144,7 +143,6 @@ function Game() {
     }
   };
 
-  // ── Start game ───────────────────────────────────────────────────
   const startGame = async () => {
     try {
       if (gameRounds <= 0 || gameRounds > 10)
@@ -164,7 +162,6 @@ function Game() {
     }
   };
 
-  // ── Player move ──────────────────────────────────────────────────
   const handlePlayerMove = async (idx: number) => {
     try {
       if (!socket) throw new Error("Socket not available");
@@ -189,12 +186,10 @@ function Game() {
     // TODO: emit game:end when server supports it
   };
 
-  // ── My symbol ────────────────────────────────────────────────────
   const myPlayer = players.find((p) => p.username === username);
   const mySymbol = myPlayer?.type ?? null;
   const isMyTurn = mySymbol === turn;
 
-  // ── Socket listeners ─────────────────────────────────────────────
   useGameListeners({
     onGameStart: useCallback(
       (data) => {

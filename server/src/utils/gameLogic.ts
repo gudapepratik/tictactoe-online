@@ -1,11 +1,14 @@
 import { Board, BoardIndex, Cell } from "../types/game";
 
-export function isWinner(board: Board, idx: BoardIndex, symbol: "X" | "O") : boolean {
+export function isWinnerOrDraw(board: Board, idx: BoardIndex, symbol: "X" | "O") : boolean | "draw" {
   const [row, col] = idx;
+
+  let cellFilledCount = 0;
 
   // check row
   let win = true;
   for(let i=0; i < 3; i++) {
+    if(board[row][i] !== "E") cellFilledCount++;
     if(board[row][i] !== symbol) {
       win = false;
       break;
@@ -17,6 +20,7 @@ export function isWinner(board: Board, idx: BoardIndex, symbol: "X" | "O") : boo
   // check col
   win = true;
   for(let i = 0; i < 3; i++) {
+    if(board[row][i] !== "E") cellFilledCount++;
     if(board[i][col] !== symbol) {
       win = false;
       break;
@@ -47,6 +51,10 @@ export function isWinner(board: Board, idx: BoardIndex, symbol: "X" | "O") : boo
       }
     }
     if(win) return true;
+  }
+
+  if(cellFilledCount === 9) {
+    return "draw";
   }
 
   return false;

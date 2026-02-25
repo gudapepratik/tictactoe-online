@@ -3,7 +3,7 @@ import { FaX } from "react-icons/fa6";
 type Props = {
   title: string;
   children: React.ReactNode;
-  setCloseModal: React.Dispatch<React.SetStateAction<boolean>>;
+  setCloseModal: React.Dispatch<React.SetStateAction<boolean>> | null;
   width: string;
   height: string;
   extraStyles?: {
@@ -18,7 +18,7 @@ function Modal({ title, children, width, height, setCloseModal, extraStyles }: P
     <div className="font-pressStart2P fixed inset-0 flex bg-black/80 items-center justify-center z-50">
       <div
         style={{ width, height }}
-        className={`flex flex-col p-5 md:p-8 bg-[#080818] border-2 border-cyan-900 pixel-box ${extraStyles?.containerStyles ?? ""}`}
+        className={`flex flex-col p-5 md:p-8 bg-primaryBG border-2 border-cyan-900 pixel-box ${extraStyles?.containerStyles ?? ""}`}
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -29,8 +29,8 @@ function Modal({ title, children, width, height, setCloseModal, extraStyles }: P
             {title}
           </h3>
           <button
-            onClick={() => setCloseModal(false)}
-            className={`retro-btn text-red-400 border-red-700 w-8 h-8 flex items-center justify-center ${extraStyles?.closeBtnStyles ?? ""}`}
+            onClick={() => setCloseModal?.(false)}
+            className={`hover:animate-flicker  hover:scale-105 hover:transition-transform w-8 h-8 border-cyan-900 pixel-box flex items-center justify-center ${extraStyles?.closeBtnStyles ?? ""}`}
           >
             <FaX size={14} />
           </button>

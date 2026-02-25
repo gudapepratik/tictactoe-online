@@ -104,7 +104,7 @@ function JoinPrivateGame({joinCode} : props) {
       <div className="font-slackey">
       <form onSubmit={handleJoinSubmit} className="flex w-full flex-col gap-8 md:gap-6">
         <div className="flex flex-col items-start w-full gap-1">
-          <label htmlFor="username" className="text-zinc-800 text-base md:text-xl">Usern@me</label>
+          <label htmlFor="username" className="text-white neon-pink text-base md:text-xl">Usern@me</label>
           <div className="flex w-full flex-col md:flex-row items-center gap-2 md:gap-0 justify-between">
             <input type="text" name="username" id="username" disabled={isAccountCreated} value={username} required onChange={handleUsernameChange} className="border-4 border-zinc-400 focus:border-zinc-600 md:w-[70%] w-full focus:scale-[1.02] transition-transform focus:outline-none px-2  text-base md:text-lg text-zinc-800" placeholder="Enter a username..."/>
             <button type="button" onClick={handleCreateAccount} className={`text-white text-[10px] md:text-lg border-4 w-fit md:px-4 md:py-2 px-3 py-2 rounded-lg md:rounded-2xl ${!isAccountCreated ? "hover:scale-110 bg-red-500 hover:bg-red-600" : "bg-green-500"}   transition-all`}>{!isAccountCreated ? "Create account" : "Account Created"}</button>
@@ -112,7 +112,7 @@ function JoinPrivateGame({joinCode} : props) {
         </div>
 
         <div className="flex flex-col items-start w-full gap-1">
-          <label className="text-zinc-800 text-base md:text-xl">Select your symbol</label>
+          <label className="text-white neon-pink text-base md:text-xl">Select your symbol</label>
 
           <div className="w-full flex items-center gap-4 md:gap-10 justify-center">
             <label className={` ${availableSymbols.includes("X") ? "hover:scale-110 cursor-pointer" : ""} ${symbol === "X" ? "scale-110": "scale-100"} transition-transform`}>
@@ -130,7 +130,7 @@ function JoinPrivateGame({joinCode} : props) {
         </div>
 
         <div className="flex flex-col items-start w-full gap-1">
-          <label className="text-zinc-800 text-base md:text-xl">Select your avatar</label>
+          <label className="text-white neon-pink text-base md:text-xl">Select your avatar</label>
           <div className="w-full flex items-center gap-4 md:gap-10 justify-center">
             {avatars.map((av) => (
               <label key={av.value} className={` ${availableAvatars.includes(av.value) ? "hover:scale-110 cursor-pointer" : ""} ${avatar === av.value ? "scale-110": "scale-100"} transition-transform`}>
@@ -144,7 +144,7 @@ function JoinPrivateGame({joinCode} : props) {
 
         <div className="flex w-full justify-center">
           <button 
-            className={`text-xl md:text-4xl border-4 w-fit  rounded-2xl px-2 md:px-6 py-2 md:py-3 hover:scale-110 bg-red-500 hover:bg-red-600  transition-all`}
+            className={`text-xl md:text-3xl border-4 w-fit  rounded-2xl px-2 md:px-6 py-2 md:py-3 ${isGameJoined ? "bg-green-500" : "bg-red-500 hover:bg-red-600 hover:scale-110"}  transition-all`}
             type="submit"
             disabled={!isAccountCreated}
             >{!isGameJoined ? "Join Game": "Game Joined"}</button>

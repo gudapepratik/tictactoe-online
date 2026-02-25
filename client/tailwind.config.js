@@ -12,10 +12,10 @@ export default {
         pressStart2P: ['"Press Start 2P"', "monospace"]
       },
       backgroundImage: {
-        primaryBG: "linear-gradient(135deg, #0a0a1a 0%, #080818 50%, #0d0d24 100%)"
+        primaryBG: "radial-gradient(circle at center, #222262 0%, #16163a 35%, #080818 70%, #000000 100%)"
       },
       colors: {
-        primaryBG: "#0a0a1a",
+        primaryBG: "#23235c",
         secondaryBG: "#111128",
         neonCyan: "#22d3ee",
         neonPink: "#ff2bd6",
