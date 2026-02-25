@@ -1,7 +1,7 @@
 import { randomUUID, UUID } from "node:crypto";
 import {Server, Socket} from "socket.io"
 import { Game, GameState, Player, PlayerAvatar, PlayerInput, PlayerType, Session } from "../types/game";
-import { createEmptyBoard, isWinner, resetBoard } from "../utils/gameLogic";
+import { createEmptyBoard, isWinnerOrDraw, resetBoard } from "../utils/gameLogic";
 import { generateGameCode } from "../utils/gameCodeGenerator";
 import {parse} from "cookie"
 import * as jwt from "jsonwebtoken"
@@ -361,8 +361,8 @@ const initSocketio = (io: Server) => {
         
         game.board[row][col] = game.turn === "X" ? "X" : "O";
         
-        const isWin = isWinner(game.board, [row, col], game.turn);
-        if(isWin) {
+        const isWin = isWinnerOrDraw(game.board, [row, col], game.turn);
+        if(isWin && isWin !== "draw") {
           player.wins += 1;
 
           // reset board
@@ -382,13 +382,14 @@ const initSocketio = (io: Server) => {
             game.round += 1; // next round
           }
         }
+
         game.turn = game.turn === "X" ? "O" : "X";
 
         const gameState : GameState = {
           idx: idx,
           player: player.username,
           symbol: player.type,
-          roundWinner: isWin ? player.type : null,
+          roundWinner: isWin === "draw" ? "draw" : isWin ? player.type : null,
           gameWinner: game.winner ? game.winner : null,
           isGameOver: game.winner !== undefined
         }

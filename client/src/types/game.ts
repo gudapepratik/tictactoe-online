@@ -41,6 +41,6 @@ export interface GameState {
   player: string; // username
   symbol: "X" | "O";
   isGameOver: boolean
-  roundWinner: "X" | "O" | null
+  roundWinner: "X" | "O" | "draw" | null
   gameWinner: "X" | "O" | "draw" | null
 }
