@@ -202,6 +202,7 @@ function Game() {
           type: "gameStart",
           totalRounds: data.totalRounds,
           roundNumber: 1,
+          isHost
         });
       },
       []
@@ -259,13 +260,21 @@ function Game() {
           }
 
           if (gameWinner === "draw") {
-            showPopup({ type: "gameDraw" });
+            showPopup({ 
+              type: "gameDraw",
+              actionTitle: "Exit Game",
+              actionHandler: handleEndGame,
+              isHost
+            });
           } else if (gameWinner) {
             const winnerPlayer = players.find((p) => p.type === gameWinner);
             showPopup({
               type: "gameWin",
               winnerSymbol: gameWinner,
               winnerName: winnerPlayer?.username ?? gameWinner,
+              actionTitle: "Exit Game",
+              actionHandler: handleEndGame,
+              isHost
             });
           }
         } else if (roundWinner) {
@@ -275,6 +284,7 @@ function Game() {
               type: "roundDraw",
               roundNumber: round,
               totalRounds,
+              isHost
             });
           } else {
             const winnerPlayer = players.find((p) => p.type === roundWinner);
@@ -284,6 +294,7 @@ function Game() {
               winnerName: winnerPlayer?.username ?? roundWinner,
               roundNumber: round,
               totalRounds,
+              isHost
             });
             // Increment wins for the winner
             setPlayers((prev) =>
@@ -310,7 +321,6 @@ function Game() {
     ),
   });
 
-  // ── Render ───────────────────────────────────────────────────────
   const waitingForOpponent = players.length < 2;
 
   return (

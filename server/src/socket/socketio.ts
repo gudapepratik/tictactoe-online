@@ -410,6 +410,55 @@ const initSocketio = (io: Server) => {
       }
     })
 
+    socket.on("game:request-reset", (gameId: UUID, res: EventResponse<null>) => {
+      try {
+        const playerUsername = socket.data.user.username;
+        if(!playerUsername) throw new Error("Username not Found")
+
+        const game = games.get(gameId);
+        if(!game) throw new Error("Game Not found")
+        
+        const player = game.playerX?.username === playerUsername ? game.playerX : game.playerO?.username === playerUsername ? game.playerO : null;
+        if(!player) throw new Error("Player Not Found")
+        
+        socket.to(`game:${gameId}`).emit("game:reset-offer");
+
+        res?.(true, "Reset offer sent to other Player, Waiting for confirmation", null);
+      } catch (error) {
+        console.log("game:request-reset Error: ", error);
+        if(error instanceof Error) {
+          res?.(false, error.message, null)
+        }
+        res?.(false, "Game request-reset Error: Unexpected error occurred", null);
+      }
+    })
+
+    socket.on("game:reset-approved", (gameId, res: EventResponse<null>) => {
+      try {
+        const playerUsername = socket.data.user.username;
+        if(!playerUsername) throw new Error("Username not Found")
+        
+        const game = games.get(gameId);
+        if(!game) throw new Error("Game Not found")
+        
+        const player = game.playerX?.username === playerUsername ? game.playerX : game.playerO?.username === playerUsername ? game.playerO : null;
+        if(!player) throw new Error("Player Not Found")
+        
+        // reset the board (same round)
+        resetBoard(game.board);
+
+        io.to(`game:${gameId}`).emit("game:reset");
+
+        res?.(true, "Game Resetted", null);
+      } catch (error) {
+        console.log("game:reset-approved Error: ", error);
+        if(error instanceof Error) {
+          res?.(false, error.message, null)
+        }
+        res?.(false, "Game reset-approved Error: Unexpected error occurred", null);
+      }
+    })
+
 
   })
 }

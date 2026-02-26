@@ -9,12 +9,15 @@ export type PopupType =
 
 export type RetroPopupData = {
     type: PopupType;
+    actionTitle?: string;
+    actionHandler?: () => void | Promise<void>;
     /** Username of winner (for roundWin / gameWin) */
     winnerName?: string;
     /** "X" or "O" – drives neon colour */
     winnerSymbol?: "X" | "O";
     roundNumber?: number;
     totalRounds?: number;
+    isHost: boolean;
 };
 
 type Props = {
@@ -83,6 +86,7 @@ function getMessage(data: RetroPopupData): string {
 export default function RetroPopup({ data, onDismiss, autoDismissMs = 0 }: Props) {
     const [visible, setVisible] = useState(true);
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const isGameOverScreen = data.type === "gameDraw" || data.type === "gameWin";
 
     const handleDismiss = () => {
         setVisible(false);
@@ -90,12 +94,13 @@ export default function RetroPopup({ data, onDismiss, autoDismissMs = 0 }: Props
     };
 
     useEffect(() => {
-        if (autoDismissMs > 0) {
-            timerRef.current = setTimeout(handleDismiss, autoDismissMs);
-        }
-        return () => {
-            if (timerRef.current) clearTimeout(timerRef.current);
-        };
+      if (autoDismissMs > 0 && !isGameOverScreen) {
+        timerRef.current = setTimeout(handleDismiss, autoDismissMs);
+      }
+
+      return () => {
+        if (timerRef.current) clearTimeout(timerRef.current);
+      };
     }, []);
 
     if (!visible) return null;
@@ -115,7 +120,7 @@ export default function RetroPopup({ data, onDismiss, autoDismissMs = 0 }: Props
     return (
         <div
             className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70"
-            onClick={handleDismiss}
+            onClick={!isGameOverScreen ? handleDismiss : undefined}
         >
             <div
                 className={`retro-pop-in relative flex flex-col items-center justify-center gap-4 p-8 md:p-12 bg-[#080818] border-4 border-current ${cfg.boxClass}`}
@@ -155,6 +160,14 @@ export default function RetroPopup({ data, onDismiss, autoDismissMs = 0 }: Props
                 >
                     {getMessage(data)}
                 </p>
+
+                {data.isHost && (data.type === "gameDraw" || data.type === "gameWin") && (
+                  <button 
+                    onClick={async () => {
+                      await data?.actionHandler?.();
+                    }}
+                  >{data.actionTitle}</button>
+                )}
 
                 {/* Dismiss hint */}
                 <p className="font-pressStart2P text-[9px] text-gray-500 mt-2 blink">
